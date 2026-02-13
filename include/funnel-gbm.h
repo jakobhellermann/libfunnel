@@ -33,7 +33,7 @@ int funnel_stream_init_gbm(struct funnel_stream *stream, int gbm_fd);
  * @param num_modifiers Number of modifiers passed
  * @return_err
  * @retval -EINVAL Invalid argument
- * @retval -ENOTSUP Format is not supported by libfunnel
+ * @retval -EOPNOTSUPP Format is not supported by libfunnel
  */
 int funnel_stream_gbm_add_format(struct funnel_stream *stream, uint32_t format,
                                  uint64_t *modifiers, size_t num_modifiers);

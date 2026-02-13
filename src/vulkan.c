@@ -95,7 +95,7 @@ int funnel_stream_vk_add_format(struct funnel_stream *stream, VkFormat format,
 
     uint32_t gbm_format = format_vk_to_gbm(format, alpha);
     if (!gbm_format)
-        return -ENOTSUP;
+        return -EOPNOTSUPP;
 
     uint32_t count;
     if (get_modifiers(vks->physical_device, format, &count, NULL) < 0)
@@ -528,7 +528,7 @@ int funnel_stream_init_vulkan(struct funnel_stream *stream, VkInstance instance,
         !vkGetImageMemoryRequirements2KHR || !vkGetSemaphoreFdKHR ||
         !vkImportSemaphoreFdKHR) {
         pw_log_error("Missing extensions");
-        return -ENOTSUP;
+        return -EOPNOTSUPP;
     }
 
     VkPhysicalDeviceMemoryProperties memory_properties;

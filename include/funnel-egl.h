@@ -26,7 +26,7 @@ enum funnel_egl_format {
  * @param display EGLDisplay to attach to the stream @borrowed-by{stream}
  * @return_err
  * @retval -EEXIST The API was already initialized once
- * @retval -ENOTSUP Missing EGL extensions
+ * @retval -EOPNOTSUPP Missing EGL extensions
  * @retval -ENODEV
  *  * Could not locate DRM render node
  *  * GBM or EGL initialization failed

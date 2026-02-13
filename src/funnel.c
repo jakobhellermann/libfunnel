@@ -1009,7 +1009,7 @@ int funnel_stream_gbm_add_format(struct funnel_stream *stream, uint32_t format,
         }
     }
     if (i >= ARRAY_SIZE(supported_formats)) {
-        return -ENOTSUP;
+        return -EOPNOTSUPP;
     }
 
     struct funnel_format *fmt =

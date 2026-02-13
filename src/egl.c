@@ -101,7 +101,7 @@ int funnel_stream_init_egl(struct funnel_stream *stream, EGLDisplay display) {
 
     if (!eglQueryDeviceStringEXT || !eglQueryDisplayAttribEXT ||
         !eglQueryDmaBufModifiersEXT)
-        return -ENOTSUP;
+        return -EOPNOTSUPP;
 
     EGLAttrib device_attr = 0;
     if (!eglQueryDisplayAttribEXT(display, EGL_DEVICE_EXT, &device_attr) ||
@@ -219,7 +219,7 @@ int funnel_stream_egl_add_format(struct funnel_stream *stream,
         return -EINVAL;
     }
 
-    return success ? 0 : -ENOTSUP;
+    return success ? 0 : -EOPNOTSUPP;
 }
 
 int funnel_buffer_get_egl_image(struct funnel_buffer *buf, EGLImage *image) {

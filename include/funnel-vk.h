@@ -52,7 +52,7 @@ extern "C" {
  * @param device VkDevice to use for the stream @borrowed-by{stream}
  * @return_err
  * @retval -EEXIST The API was already initialized once
- * @retval -ENOTSUP Missing Vulkan extensions
+ * @retval -EOPNOTSUPP Missing Vulkan extensions
  * @retval -ENODEV
  *  * Could not locate DRM render node
  *  * GBM or Vulkan initialization failed
@@ -106,7 +106,7 @@ int funnel_stream_vk_set_usage(struct funnel_stream *stream,
  * @retval -EINVAL
  *  * Invalid argument
  *  * API is not Vulkan
- * @retval -ENOTSUP VkFormat is not supported by libfunnel
+ * @retval -EOPNOTSUPP VkFormat is not supported by libfunnel
  * @retval -ENOENT VkFormat is not supported by the device or not usable
  */
 int funnel_stream_vk_add_format(struct funnel_stream *stream, VkFormat format,
