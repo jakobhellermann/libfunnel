@@ -1673,6 +1673,12 @@ static int funnel_stream_enqueue_internal(struct funnel_stream *stream,
                 return_buffer(stream, stream->pending_buffer);
             stream->pending_buffer = NULL;
         } else if (is_buffer_pending(stream)) {
+            if (stream->skip_frames) {
+                stream->skip_frames--;
+                return_buffer(stream, buf);
+                unblock_process_thread(stream);
+                UNLOCK_RETURN(0);
+            }
             unblock_process_thread(stream);
             pw_thread_loop_wait(ctx->loop);
             continue;

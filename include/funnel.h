@@ -473,7 +473,8 @@ int funnel_stream_enqueue(struct funnel_stream *stream,
  * Return a buffer to the pool without enqueueing it.
  *
  * After this call, the buffer is no longer owned by the user and may not be
- * queued again until it is dequeued. This will effectively drop one frame.
+ * queued again until it is dequeued. This will effectively drop one frame in
+ * the stream (a PipeWire process cycle will complete with no frame transfer).
  *
  * @sync-int
  *
@@ -488,11 +489,23 @@ int funnel_stream_return(struct funnel_stream *stream,
                          struct funnel_buffer *buf);
 
 /**
- * Skip a frame for a stream
+ * Break out of a frame processing cycle for a stream
  *
- * This call forces at least one subsequent call to funnel_stream_dequeue()
- * to return without a buffer. This is useful to break a thread out of
- * that function.
+ * This call unblocks stream buffer enqueue/dequeue functions. This is useful to
+ * break a thread out of blocking calls. The precise behavior depends on the
+ * mode:
+ *
+ * * #FUNNEL_ASYNC: For each call, funnel_stream_dequeue() will return once
+ *   without a buffer even if one was available.
+ * * #FUNNEL_DOUBLE_BUFFERED: For each call, if funnel_stream_enqueue() would
+ *   block, it will instead drop the passed buffer and return immediately.
+ * * #FUNNEL_SINGLE_BUFFERED and #FUNNEL_SYNCHRONOUS: For each call,
+ *   funnel_stream_dequeue() will return once without a buffer.
+ *
+ * Note that this function does not force an empty PipeWire process cycle,
+ * that is, it won't "skip a frame" in the stream itself. Think of it as
+ * skipping a frame loop from the point of view of your code. In other words,
+ * it does not forcefully generate any delay.
  *
  * @sync-int
  *
