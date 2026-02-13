@@ -53,6 +53,7 @@ extern "C" {
  * @return_err
  * @retval -EEXIST The API was already initialized once
  * @retval -EOPNOTSUPP Missing Vulkan extensions
+ * @retval -EPROTONOSUPPORT GPU driver not supported (PipeWire version too old)
  * @retval -ENODEV
  *  * Could not locate DRM render node
  *  * GBM or Vulkan initialization failed

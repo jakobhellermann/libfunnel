@@ -27,6 +27,7 @@ enum funnel_egl_format {
  * @return_err
  * @retval -EEXIST The API was already initialized once
  * @retval -EOPNOTSUPP Missing EGL extensions
+ * @retval -EPROTONOSUPPORT GPU driver not supported (PipeWire version too old)
  * @retval -ENODEV
  *  * Could not locate DRM render node
  *  * GBM or EGL initialization failed

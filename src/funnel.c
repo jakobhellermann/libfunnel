@@ -903,6 +903,22 @@ void funnel_stream_set_buffer_callbacks(struct funnel_stream *stream,
     stream->cb_opaque = opaque;
 }
 
+static void shutdown_gbm(struct funnel_stream *stream) {
+    if (stream->dummy_syncobj) {
+        int fd = gbm_device_get_fd(stream->gbm);
+        int ret = drmSyncobjDestroy(fd, stream->dummy_syncobj);
+        assert(ret == 0);
+    }
+
+    if (stream->gbm) {
+        int fd = gbm_device_get_fd(stream->gbm);
+        gbm_device_destroy(stream->gbm);
+        close(fd);
+    }
+
+    memset(&stream->feat, 0, sizeof(stream->feat));
+}
+
 int funnel_stream_init_gbm(struct funnel_stream *stream, int gbm_fd) {
     if (stream->gbm)
         return -EEXIST;
@@ -978,7 +994,6 @@ int funnel_stream_init_gbm(struct funnel_stream *stream, int gbm_fd) {
     drmFreeVersion(ver);
 
     stream->config.bo_flags = GBM_BO_USE_RENDERING;
-    stream->api = API_GBM;
     stream->api_supports_explicit_sync = stream->feat.timeline_sync;
     stream->api_requires_explicit_sync = false;
 
@@ -989,8 +1004,21 @@ int funnel_stream_init_gbm(struct funnel_stream *stream, int gbm_fd) {
                 stream->feat.timeline_sync_import_export,
                 stream->feat.migration_bug);
 
+    if (stream->feat.explicit_sync && !stream->ctx->feat.explicit_sync) {
+        if (!stream->feat.implicit_sync) {
+            pw_log_error("PipeWire is too old for explicit sync and driver "
+                         "does not support implicit sync. Please update your "
+                         "PipeWire daemon version or use a different driver.");
+            shutdown_gbm(stream);
+            return -EPROTONOSUPPORT;
+        }
+        stream->feat.explicit_sync = false;
+        pw_log_warn("PipeWire is too old, explicit sync support unavailable");
+    }
+
     assert(stream->feat.implicit_sync || stream->feat.explicit_sync);
 
+    stream->api = API_GBM;
     return 0;
 }
 
@@ -1451,17 +1479,7 @@ void funnel_stream_destroy(struct funnel_stream *stream) {
 
     pw_thread_loop_unlock(ctx->loop);
 
-    if (stream->dummy_syncobj) {
-        int fd = gbm_device_get_fd(stream->gbm);
-        int ret = drmSyncobjDestroy(fd, stream->dummy_syncobj);
-        assert(ret == 0);
-    }
-
-    if (stream->gbm) {
-        int fd = gbm_device_get_fd(stream->gbm);
-        gbm_device_destroy(stream->gbm);
-        close(fd);
-    }
+    shutdown_gbm(stream);
 
     free((void *)stream->name);
     free(stream);
