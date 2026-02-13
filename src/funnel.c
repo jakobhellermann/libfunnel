@@ -1452,6 +1452,40 @@ int funnel_stream_stop(struct funnel_stream *stream) {
     UNLOCK_RETURN(pw_stream_set_active(stream->stream, false));
 }
 
+int funnel_stream_get_state(struct funnel_stream *stream,
+                            enum funnel_stream_state *pstate) {
+
+    struct funnel_ctx *ctx = stream->ctx;
+    pw_thread_loop_lock(ctx->loop);
+
+    if (ctx->dead)
+        UNLOCK_RETURN(-EIO);
+
+    errno = 0;
+    const char *str = NULL;
+    enum pw_stream_state state = pw_stream_get_state(stream->stream, &str);
+    if (state == PW_STREAM_STATE_ERROR) {
+        int ret = errno ? -errno : -EIO;
+
+        pw_log_error("Stream is in error state (%d): %s", errno, str);
+
+        UNLOCK_RETURN(ret);
+    }
+
+    *pstate = (int)state;
+
+    UNLOCK_RETURN(0);
+}
+
+SPA_STATIC_ASSERT((int)FUNNEL_STREAM_STATE_UNCONNECTED ==
+                  (int)PW_STREAM_STATE_UNCONNECTED);
+SPA_STATIC_ASSERT((int)FUNNEL_STREAM_STATE_CONNECTING ==
+                  (int)PW_STREAM_STATE_CONNECTING);
+SPA_STATIC_ASSERT((int)FUNNEL_STREAM_STATE_PAUSED ==
+                  (int)PW_STREAM_STATE_PAUSED);
+SPA_STATIC_ASSERT((int)FUNNEL_STREAM_STATE_STREAMING ==
+                  (int)PW_STREAM_STATE_STREAMING);
+
 void funnel_stream_destroy(struct funnel_stream *stream) {
     if (!stream)
         return;

@@ -190,6 +190,22 @@ enum funnel_sync {
 };
 
 /**
+ * Represents the state of a stream.
+ *
+ * This maps to a PipeWire pw_stream_state.
+ */
+enum funnel_stream_state {
+    /** The stream is not connected to a consumer */
+    FUNNEL_STREAM_STATE_UNCONNECTED = 0,
+    /** The stream is currently connecting to a consumer */
+    FUNNEL_STREAM_STATE_CONNECTING = 1,
+    /** The stream is paused or reconfiguring */
+    FUNNEL_STREAM_STATE_PAUSED = 2,
+    /** The stream is actively streaming  */
+    FUNNEL_STREAM_STATE_STREAMING = 3
+};
+
+/**
  * Create a Funnel context.
  *
  * As multiple Funnel contexts are completely independent, this function has no
@@ -369,6 +385,33 @@ int funnel_stream_start(struct funnel_stream *stream);
  * @retval -EIO The PipeWire context is invalid
  */
 int funnel_stream_stop(struct funnel_stream *stream);
+
+/**
+ * Get the current state of a stream.
+ *
+ * This is primarily intended for informational purposes (for user feedback). It
+ * could also be used to change the rendering flow depending on whether the
+ * stream is expected to consume frames or not. The return value should be
+ * treated as a hint.
+ *
+ * NOTE: This function should not be used to make any decisions about blocking
+ * calls! Since the stream state may change at any time, a running stream could
+ * transition to the paused state immediately after this call returns.
+ * Similarly, calling funnel_stream_dequeue() immediately after this call could
+ * return a buffer even if the stream is paused, or might not return a buffer
+ * despite the stream being running.
+ *
+ * @sync-int
+ *
+ * @param stream Stream @borrowed
+ * @param[out] pstate The returned stream state
+ * @return_err
+ * @retval -EIO
+ *  * The PipeWire context is invalid
+ *  * Unknown stream error
+ */
+int funnel_stream_get_state(struct funnel_stream *stream,
+                            enum funnel_stream_state *pstate);
 
 /**
  * Destroy a stream.
