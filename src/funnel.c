@@ -920,19 +920,19 @@ int funnel_stream_init_gbm(struct funnel_stream *stream, int gbm_fd) {
     const char *backend = gbm_device_get_backend_name(stream->gbm);
     pw_log_info("GBM backend: %s", backend);
 
-    stream->gbm_timeline_sync = false;
+    stream->feat.timeline_sync = false;
 
     uint64_t cap;
     int ret = drmGetCap(fd, DRM_CAP_SYNCOBJ, &cap);
-    stream->gbm_explicit_sync = cap && !ret;
+    stream->feat.explicit_sync = cap && !ret;
 
-    if (stream->gbm_explicit_sync) {
+    if (stream->feat.explicit_sync) {
         int ret = drmGetCap(fd, DRM_CAP_SYNCOBJ_TIMELINE, &cap);
-        stream->gbm_timeline_sync = cap && !ret;
-        stream->gbm_timeline_sync_import_export = false;
+        stream->feat.timeline_sync = cap && !ret;
+        stream->feat.timeline_sync_import_export = false;
 
 #ifdef DRM_SYNCOBJ_HANDLE_TO_FD_FLAGS_TIMELINE
-        if (stream->gbm_timeline_sync) {
+        if (stream->feat.timeline_sync) {
 
             // Test for DRM_SYNCOBJ_HANDLE_TO_FD_FLAGS_TIMELINE support
             struct drm_syncobj_handle args = {
@@ -946,7 +946,7 @@ int funnel_stream_init_gbm(struct funnel_stream *stream, int gbm_fd) {
             assert(ret == -1);
             if (errno == ENOENT) {
                 // Syncobj does not exist, but flags are supported
-                stream->gbm_timeline_sync_import_export = true;
+                stream->feat.timeline_sync_import_export = true;
             } else {
                 // Create a dummy syncobj to use for transfers
                 int ret = drmSyncobjCreate(fd, 0, &stream->dummy_syncobj);
@@ -957,22 +957,39 @@ int funnel_stream_init_gbm(struct funnel_stream *stream, int gbm_fd) {
 #endif
     }
 
+    drmVersion *ver = drmGetVersion(fd);
+    assert(ver);
+
+    pw_log_info("DRM device driver: %s (%s, %s)", ver->name, ver->date,
+                ver->desc);
+
+    stream->feat.implicit_sync = true;
+
+    if (!strcmp(backend, "nvidia") || !strcmp(ver->name, "nvidia-drm")) {
+        pw_log_info("Detected Nvidia: Implicit sync unsupported");
+        stream->feat.implicit_sync = false;
+    }
+
+    if (!strcmp(ver->name, "nouveau")) {
+        pw_log_info("Detected Nouveau: Enabling dma-buf migration workaround");
+        stream->feat.migration_bug = false;
+    }
+
+    drmFreeVersion(ver);
+
     stream->config.bo_flags = GBM_BO_USE_RENDERING;
     stream->api = API_GBM;
-    stream->api_supports_explicit_sync = stream->gbm_timeline_sync;
+    stream->api_supports_explicit_sync = stream->feat.timeline_sync;
     stream->api_requires_explicit_sync = false;
-    stream->gbm_implicit_sync = true;
-
-    if (!strcmp(backend, "nvidia"))
-        stream->gbm_implicit_sync = false;
 
     pw_log_info("GBM features: fd=%d implicit_sync=%d, explicit_sync=%d "
-                "timeline_sync=%d, import_export=%d",
-                fd, stream->gbm_implicit_sync, stream->gbm_explicit_sync,
-                stream->gbm_timeline_sync,
-                stream->gbm_timeline_sync_import_export);
+                "timeline_sync=%d, import_export=%d, migration_bug=%d",
+                fd, stream->feat.implicit_sync, stream->feat.explicit_sync,
+                stream->feat.timeline_sync,
+                stream->feat.timeline_sync_import_export,
+                stream->feat.migration_bug);
 
-    assert(stream->gbm_implicit_sync || stream->gbm_explicit_sync);
+    assert(stream->feat.implicit_sync || stream->feat.explicit_sync);
 
     return 0;
 }
@@ -1110,19 +1127,20 @@ int funnel_stream_set_mode(struct funnel_stream *stream,
 int funnel_stream_validate_sync(struct funnel_stream *stream,
                                 enum funnel_sync *frontend,
                                 enum funnel_sync *backend) {
-    assert((stream->api_supports_explicit_sync && stream->gbm_explicit_sync) ||
-           stream->gbm_implicit_sync);
+    assert((stream->api_supports_explicit_sync && stream->feat.explicit_sync) ||
+           stream->feat.implicit_sync);
 
     switch (*frontend) {
     case FUNNEL_SYNC_BOTH:
         // It is legal to request this if the API does not support
         // explicit sync (EGL without the right extension). In that
         // case, it is converted to IMPLICIT.
-        if (!stream->api_supports_explicit_sync || !stream->gbm_explicit_sync) {
+        if (!stream->api_supports_explicit_sync ||
+            !stream->feat.explicit_sync) {
             *frontend = FUNNEL_SYNC_IMPLICIT;
             if (*backend == FUNNEL_SYNC_BOTH)
                 *backend = FUNNEL_SYNC_IMPLICIT;
-        } else if (!stream->gbm_implicit_sync) {
+        } else if (!stream->feat.implicit_sync) {
             pw_log_info(
                 "FUNNEL_SYNC_EXPLICIT forced for frontend due to missing "
                 "GPU implicit sync support.");
@@ -1133,14 +1151,15 @@ int funnel_stream_validate_sync(struct funnel_stream *stream,
     case FUNNEL_SYNC_IMPLICIT:
         if (stream->api_requires_explicit_sync)
             return -EINVAL;
-        if (!stream->gbm_implicit_sync) {
+        if (!stream->feat.implicit_sync) {
             pw_log_error("Implicit sync requested, but the GPU driver does not "
                          "support it.");
             return -EOPNOTSUPP;
         }
         break;
     case FUNNEL_SYNC_EXPLICIT:
-        if (!stream->gbm_explicit_sync || !stream->api_supports_explicit_sync) {
+        if (!stream->feat.explicit_sync ||
+            !stream->api_supports_explicit_sync) {
             pw_log_error("Explicit sync requested, but the GPU driver does not "
                          "support it.");
             return -EOPNOTSUPP;
@@ -1158,7 +1177,7 @@ int funnel_stream_validate_sync(struct funnel_stream *stream,
             return -EINVAL;
         } else if (*frontend == FUNNEL_SYNC_BOTH)
             *frontend = FUNNEL_SYNC_EXPLICIT;
-        if (!stream->gbm_timeline_sync) {
+        if (!stream->feat.timeline_sync) {
             pw_log_error("Explicit sync requested for PipeWire, but the GPU "
                          "driver does not "
                          "support it.");
@@ -1171,7 +1190,7 @@ int funnel_stream_validate_sync(struct funnel_stream *stream,
                 "Converting explicit sync to implicit is not supported");
             return -EINVAL;
         }
-        if (!stream->gbm_implicit_sync) {
+        if (!stream->feat.implicit_sync) {
             pw_log_info(
                 "FUNNEL_SYNC_EXPLICIT forced for backend due to missing "
                 "GPU implicit sync support.");
@@ -1179,7 +1198,7 @@ int funnel_stream_validate_sync(struct funnel_stream *stream,
         }
         break;
     case FUNNEL_SYNC_IMPLICIT:
-        if (!stream->gbm_implicit_sync) {
+        if (!stream->feat.implicit_sync) {
             pw_log_error("Implicit sync requested, but the GPU driver does not "
                          "support it.");
             return -EOPNOTSUPP;
@@ -1661,7 +1680,7 @@ int funnel_stream_enqueue(struct funnel_stream *stream,
 
     if (buf->frontend_sync) {
         if (!buf->backend_sync && !buf->release_sync_file_set) {
-            assert(stream->gbm_implicit_sync);
+            assert(stream->feat.implicit_sync);
             int fd = -1;
 
             ret = funnel_stream_export_sync_file(
@@ -1844,7 +1863,7 @@ int funnel_buffer_set_release_sync_file(struct funnel_buffer *buf, int fd) {
     }
 
     if (!buf->backend_sync) {
-        assert(buf->stream->gbm_implicit_sync);
+        assert(buf->stream->feat.implicit_sync);
         struct dma_buf_import_sync_file args = {
             .flags = DMA_BUF_SYNC_WRITE,
             .fd = fd,
@@ -1881,7 +1900,7 @@ static int funnel_stream_import_sync_file(struct funnel_stream *stream,
         return -EINVAL;
 
 #ifdef DRM_SYNCOBJ_HANDLE_TO_FD_FLAGS_TIMELINE
-    if (stream->gbm_timeline_sync_import_export) {
+    if (stream->feat.timeline_sync_import_export) {
         args.flags |= DRM_SYNCOBJ_HANDLE_TO_FD_FLAGS_TIMELINE;
         args.handle = handle;
         args.point = point;
@@ -1896,7 +1915,7 @@ static int funnel_stream_import_sync_file(struct funnel_stream *stream,
     if (ret < 0)
         return -errno;
 
-    if (!stream->gbm_timeline_sync_import_export) {
+    if (!stream->feat.timeline_sync_import_export) {
         ret = drmSyncobjTransfer(gbm_fd, handle, point, stream->dummy_syncobj,
                                  0, 0);
         if (ret < 0)
@@ -1922,7 +1941,7 @@ static int funnel_stream_export_sync_file(struct funnel_stream *stream,
     *fd = -1;
 
 #ifdef DRM_SYNCOBJ_HANDLE_TO_FD_FLAGS_TIMELINE
-    if (stream->gbm_timeline_sync_import_export) {
+    if (stream->feat.timeline_sync_import_export) {
         args.flags |= DRM_SYNCOBJ_HANDLE_TO_FD_FLAGS_TIMELINE;
         args.handle = handle;
         args.point = point;

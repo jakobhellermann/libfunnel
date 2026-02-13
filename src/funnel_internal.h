@@ -106,10 +106,13 @@ struct funnel_stream {
     bool api_requires_explicit_sync;
 
     struct gbm_device *gbm;
-    bool gbm_explicit_sync;
-    bool gbm_implicit_sync;
-    bool gbm_timeline_sync;
-    bool gbm_timeline_sync_import_export;
+    struct {
+        bool explicit_sync;
+        bool implicit_sync;
+        bool timeline_sync;
+        bool timeline_sync_import_export;
+        bool migration_bug;
+    } feat;
     uint32_t dummy_syncobj;
 
     struct spa_hook stream_listener;
