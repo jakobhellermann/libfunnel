@@ -4,6 +4,10 @@
 #include "funnel.h"
 #include <EGL/egl.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Formats available for EGL integration
  */
@@ -114,3 +118,7 @@ int funnel_buffer_get_acquire_egl_sync(struct funnel_buffer *buf,
  * @retval -EIO Unable to set the release EGLSync (is the sync type correct?)
  */
 int funnel_buffer_set_release_egl_sync(struct funnel_buffer *buf, EGLSync sync);
+
+#ifdef __cplusplus
+}
+#endif

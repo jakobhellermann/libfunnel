@@ -3,6 +3,10 @@
 #include "funnel.h"
 #include <vulkan/vulkan.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @file
  * libfunnel Vulkan API integration
  *
@@ -184,3 +188,7 @@ int funnel_buffer_get_vk_semaphores(struct funnel_buffer *buf,
  * @retval -EBUSY Already called once for this buffer
  */
 int funnel_buffer_get_vk_fence(struct funnel_buffer *buf, VkFence *pfence);
+
+#ifdef __cplusplus
+}
+#endif

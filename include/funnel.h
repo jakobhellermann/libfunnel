@@ -4,6 +4,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @file */
 
 struct funnel_ctx;
@@ -472,3 +476,7 @@ bool funnel_buffer_has_sync(struct funnel_buffer *buf);
  * @retval false if the buffer is unlikely to be efficient to render into
  */
 bool funnel_buffer_is_efficient_for_rendering(struct funnel_buffer *buf);
+
+#ifdef __cplusplus
+}
+#endif

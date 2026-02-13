@@ -4,6 +4,10 @@
 #include "funnel.h"
 #include <gbm.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Set up a stream for GBM integration.
  *
@@ -135,3 +139,7 @@ int funnel_buffer_get_acquire_sync_file(struct funnel_buffer *buf, int *pfd);
  *  * Sync object APIs were already already used
  */
 int funnel_buffer_set_release_sync_file(struct funnel_buffer *buf, int fd);
+
+#ifdef __cplusplus
+}
+#endif
