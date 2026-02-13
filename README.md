@@ -80,7 +80,7 @@ funnel_stream_set_size(stream, width, height);
 funnel_stream_set_mode(stream, FUNNEL_ASYNC);
 
 // Optional: Enable explicit sync support
-funnel_stream_set_sync(stream, FUNNEL_SYNC_EITHER);
+funnel_stream_set_sync(stream, FUNNEL_SYNC_BOTH, FUNNEL_SYNC_BOTH);
 
 // Formats in priority order
 // If you don't want alpha, remove the first line
@@ -106,8 +106,8 @@ while (keep_rendering) {
         // Change does not necessarily apply immediately, see below
     }
 
-    funnel_stream_dequeue(stream, &buf);
-    if (!buf) {
+    int ret = funnel_stream_dequeue(stream, &buf);
+    if (ret != 1) {
         // Skip this frame
         continue;
     }
