@@ -318,14 +318,13 @@ static void update_timeouts(struct funnel_stream *stream) {
                          stream->timer, to, iv, false);
 }
 
-static int return_buffer(struct funnel_stream *stream,
-                         struct funnel_buffer *buf) {
+static void return_buffer(struct funnel_stream *stream,
+                          struct funnel_buffer *buf) {
     if (!buf->pw_buffer) {
         funnel_buffer_free(buf);
-        return 0;
     }
 
-    return pw_stream_return_buffer(stream->stream, buf->pw_buffer);
+    assert(!pw_stream_return_buffer(stream->stream, buf->pw_buffer));
 }
 
 static void reset_buffers(struct funnel_stream *stream) {
@@ -1526,7 +1525,9 @@ static int funnel_stream_enqueue_internal(struct funnel_stream *stream,
 
         if (ctx->dead || !stream->active) {
             pw_stream_return_buffer(stream->stream, buf->pw_buffer);
-            UNLOCK_RETURN(ctx->dead ? -EIO : -ESHUTDOWN);
+            pw_log_info(
+                "enqueue: Context is dead or inactive, dropping buffer");
+            UNLOCK_RETURN(0);
         }
 
         enum pw_stream_state state = pw_stream_get_state(stream->stream, NULL);
@@ -1653,10 +1654,10 @@ int funnel_stream_return(struct funnel_stream *stream,
         stream->buffers_dequeued--;
 
         unblock_process_thread(stream);
-
         pw_stream_trigger_process(stream->stream);
+        return_buffer(stream, buf);
 
-        UNLOCK_RETURN(return_buffer(stream, buf));
+        UNLOCK_RETURN(0);
     } else {
         UNLOCK_RETURN(funnel_stream_enqueue_internal(stream, buf, false));
     }

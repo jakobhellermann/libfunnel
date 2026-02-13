@@ -416,8 +416,6 @@ int funnel_stream_dequeue(struct funnel_stream *stream,
  *  * Invalid argument
  *  * Stream is in an invalid state (not yet configured)
  *  * Buffer requires sync, but sync was not handled properly
- * @retval -EIO The PipeWire context is invalid
- * @retval -ESHUTDOWN Stream is not started
  */
 int funnel_stream_enqueue(struct funnel_stream *stream,
                           struct funnel_buffer *buf);
@@ -436,8 +434,6 @@ int funnel_stream_enqueue(struct funnel_stream *stream,
  * @retval -EINVAL
  *  * Invalid argument
  *  * Stream is in an invalid state (not yet configured)
- * @retval -EIO The PipeWire context is invalid
- * @retval -ESHUTDOWN Stream is not started
  */
 int funnel_stream_return(struct funnel_stream *stream,
                          struct funnel_buffer *buf);
