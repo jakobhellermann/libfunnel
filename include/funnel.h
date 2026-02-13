@@ -10,9 +10,49 @@ extern "C" {
 
 /** @file */
 
-struct funnel_ctx;
-struct funnel_stream;
-struct funnel_buffer;
+/**
+ * @brief A libfunnel context
+ *
+ * As libfunnel uses no global state, each libfunnel context is completely
+ * independent. A context encapsulates a connection to the PipeWire daemon and
+ * a background processing thread that handles all PipeWire events and
+ * communication.
+ */
+typedef struct funnel_ctx funnel_ctx;
+
+/**
+ * A PipeWire video stream
+ *
+ * A stream encapsulates a PipeWire node and a single output port. A stream can
+ * be configured with a given resolution and choice of formats. When it is
+ * connected to an input port, it will deliver frames to it.
+ *
+ * A libfunnel context can have multiple streams, which all are managed through
+ * the shared PipeWire daemon connection and which share the same thread loop.
+ */
+typedef struct funnel_stream funnel_stream;
+
+/**
+ * A video buffer (frame)
+ *
+ * A buffer encapsulates a video frame of a given format and dimensions. Buffers
+ * are dynamically allocated and re-allocated when a stream negotiates its
+ * format and properties, as needed by the consumer it is connected to, or when
+ * the producer changes the stream confiiguration.
+ *
+ * Buffers are allocated and owned by a stream and are re-used while video is
+ * being delivered. Buffers are either empty (ready for use), dequeued (owned by
+ * the API user, and being rendered or written to), or enqueued (ready for use
+ * and delivery to the consumer). When the consumer is done with a buffer, it is
+ * returned to libfunnel and becomes empty again.
+ *
+ * Since the stream can re-negotiate at any time (through the background
+ * thread), a dequeued buffer might become invalid as new buffers were
+ * allocated. If this happens, the dequeued buffer is not freed immediately, so
+ * it can still be written or rendered to as normal. When such a stale buffer is
+ * enqueued, it will be discarded and freed instead.
+ */
+typedef struct funnel_buffer funnel_buffer;
 
 /**
  * A rational frame rate
@@ -27,18 +67,20 @@ struct funnel_fraction {
  */
 static const struct funnel_fraction FUNNEL_RATE_VARIABLE = {0, 1};
 
-/** Helper to create a funnel_fraction
- @param num Numerator
- @param den Denominator
- @returns The funnel_fraction
-
+/**
+ * Helper to create a funnel_fraction
+ *
+ * @param num Numerator
+ * @param den Denominator
+ * @returns The funnel_fraction
  */
 static inline struct funnel_fraction FUNNEL_FRACTION(uint32_t num,
                                                      uint32_t den) {
     return (struct funnel_fraction){num, den};
 }
 
-/** A user callback for buffer creation/destruction
+/**
+ * A user callback for buffer creation/destruction
  *
  * @param opaque Opaque user data pointer
  * @param stream Stream for this buffer @borrowed
