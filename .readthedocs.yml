@@ -12,8 +12,11 @@ build:
     python: "3.13"
 
   jobs:
+    create_environment:
+      - curl -LO https://www.doxygen.nl/files/doxygen-1.16.1.linux.bin.tar.gz
+      - tar xzf doxygen-1.16.1.linux.bin.tar.gz
     pre_build:
-      - doxygen
+      - doxygen-1.16.1/bin/doxygen
     build:
       html:
         - "mkdir -p $READTHEDOCS_OUTPUT"
