@@ -1333,7 +1333,7 @@ int funnel_stream_configure(struct funnel_stream *stream) {
     case FUNNEL_DOUBLE_BUFFERED:
     case FUNNEL_SINGLE_BUFFERED:
     case FUNNEL_SYNCHRONOUS:
-        lazy = true;
+        lazy = ctx->feat.lazy;
         break;
     }
 
