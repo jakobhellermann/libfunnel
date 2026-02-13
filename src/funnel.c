@@ -554,8 +554,7 @@ static void on_param_changed(void *data, uint32_t id,
                                      stream->cur.config.buffers.min,
                                      stream->cur.config.buffers.max),
             SPA_PARAM_BUFFERS_dataType, SPA_POD_CHOICE_FLAGS_Int(buffertypes),
-            SPA_PARAM_BUFFERS_blocks,
-                            SPA_POD_Int(stream->cur.plane_count), 0);
+            SPA_PARAM_BUFFERS_blocks, SPA_POD_Int(stream->cur.plane_count), 0);
         params[num_params++] =
             (struct spa_pod *)spa_pod_builder_pop(&pod_builder.b, &f);
     }
