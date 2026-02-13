@@ -391,7 +391,7 @@ int main(int argc, char **argv) {
 
     ret =
         funnel_stream_set_rate(stream, FUNNEL_RATE_VARIABLE,
-                               FUNNEL_FRACTION(1, 1), FUNNEL_FRACTION(1000, 1));
+                               FUNNEL_RATE_VARIABLE, FUNNEL_FRACTION(1000, 1));
     assert(ret == 0);
 
     ret = funnel_stream_egl_add_format(stream, FUNNEL_EGL_FORMAT_RGBA8888);

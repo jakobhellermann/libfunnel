@@ -880,7 +880,7 @@ int main(int argc, char **argv) {
 
     ret =
         funnel_stream_set_rate(stream, FUNNEL_RATE_VARIABLE,
-                               FUNNEL_FRACTION(1, 1), FUNNEL_FRACTION(1000, 1));
+                               FUNNEL_RATE_VARIABLE, FUNNEL_FRACTION(1000, 1));
     assert(ret == 0);
 
     ret = funnel_stream_vk_set_usage(stream, VK_IMAGE_USAGE_TRANSFER_DST_BIT);

@@ -287,6 +287,10 @@ int funnel_stream_set_sync(struct funnel_stream *stream,
 /**
  * Set the frame rate of a stream.
  *
+ * Note: If the default rate is FUNNEL_RATE_VARIABLE, then the minimum rate
+ * also needs to be FUNNEL_RATE_VARIABLE. Otherwise, this will cause issues
+ * with some PipeWire versions.
+ *
  * @sync-ext
  *
  * @param stream Stream @borrowed
