@@ -9,6 +9,13 @@ extern "C" {
 #endif
 
 /**
+ * @file
+ * libfunnel low-level GBM API integration
+ *
+ * See @ref test-egl.c for a usage example.
+ */
+
+/**
  * Set up a stream for GBM integration.
  *
  * @sync-ext

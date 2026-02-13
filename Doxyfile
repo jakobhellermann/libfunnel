@@ -22,7 +22,7 @@ INPUT                  = include docs
 FILE_PATTERNS          = "*.h" "*.c" "*.md"
 RECURSIVE              = YES
 EXAMPLE_PATH           = demo
-EXAMPLE_PATTERNS       = "*.c" "*.inc"
+EXAMPLE_PATTERNS       = "*.c"
 ALIASES               += "return_err=@return 0 on success, or a negative error number on error."
 ALIASES               += "borrowed=[\ref Lifetimes \"@e Lifetime: <b>borrowed</b>\"]"
 ALIASES               += "borrowed-from{1}=[\ref Lifetimes \"@e Lifetime: @b borrowed-from <tt>\1</tt>\"]"
@@ -35,12 +35,10 @@ INLINE_SIMPLE_STRUCTS  = YES
 REFERENCED_BY_RELATION = NO
 REFERENCES_RELATION    = NO
 IGNORE_PREFIX          =
-GENERATE_TREEVIEW      = YES
 SEARCHENGINE           = YES
 GENERATE_LATEX         = NO
 
-TOC_INCLUDE_HEADINGS   = 0
-LAYOUT_FILE            = doxygen/DoxygenLayout.xml
+TOC_INCLUDE_HEADINGS   = 3
 
 MACRO_EXPANSION        = YES
 EXPAND_ONLY_PREDEF     = YES
@@ -49,6 +47,11 @@ HTML_EXTRA_STYLESHEET  = doxygen/doxygen-awesome-css/doxygen-awesome.css
 HTML_EXTRA_FILES       = doxygen/doxygen-awesome-css/doxygen-awesome-darkmode-toggle.js
 HTML_INDEX_NUM_ENTRIES = 100
 HTML_HEADER            = doxygen/header.html
+
+GENERATE_TREEVIEW      = YES # optional. Also works without treeview
+DISABLE_INDEX = NO
+FULL_SIDEBAR = NO
+HTML_COLORSTYLE        = LIGHT # required with Doxygen >= 1.9.5
 
 MAX_INITIALIZER_LINES  = 1
 SORT_MEMBER_DOCS       = NO

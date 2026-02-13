@@ -9,11 +9,28 @@ extern "C" {
 #endif
 
 /**
+ * @file
+ * libfunnel EGL API integration
+ *
+ * See @ref test-egl.c for a usage example.
+ */
+
+/**
+ * @example test-egl.c
+ *
+ * This is an example of how to use the EGL API integration with a
+ * bare-bones X11 + EGL application.
+ */
+
+/**
  * Formats available for EGL integration
  */
 enum funnel_egl_format {
+    /** Unknown format */
     FUNNEL_EGL_FORMAT_UNKNOWN = 0,
+    /** 8-bit RGB without alpha, sRGB (32bpp with padding) */
     FUNNEL_EGL_FORMAT_RGB888,
+    /** 8-bit RGBA with premultiplied alpha, sRGB (32bpp) */
     FUNNEL_EGL_FORMAT_RGBA8888,
 };
 

@@ -8,7 +8,10 @@
 extern "C" {
 #endif
 
-/** @file */
+/**
+ * @file
+ * libfunnel core API
+ */
 
 /**
  * @brief A libfunnel context

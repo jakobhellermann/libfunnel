@@ -7,8 +7,11 @@
 extern "C" {
 #endif
 
-/** @file
+/**
+ * @file
  * libfunnel Vulkan API integration
+ *
+ * See @ref test-vk.c for a usage example.
  *
  * ## Required Vulkan device extensions
  *
@@ -38,6 +41,13 @@ extern "C" {
  * - VK_KHR_get_physical_device_properties2
  * - VK_KHR_external_memory_capabilities
  * - VK_KHR_external_semaphore_capabilities
+ */
+
+/**
+ * @example test-vk.c
+ *
+ * This is an example of how to use the Vulkan API integration with a
+ * bare-bones Wayland + Vulkan application.
  */
 
 /**
