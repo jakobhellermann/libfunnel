@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <libdrm/drm_fourcc.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -98,11 +99,44 @@ static void on_core_error(void *data, uint32_t id, int seq, int res,
 
     if (id == PW_ID_CORE) {
         ctx->dead = true;
+        pw_thread_loop_signal(ctx->loop, false);
     }
+}
+
+static bool check_version(struct funnel_ctx *ctx, uint32_t major,
+                          uint32_t minor, uint32_t micro) {
+    return (major < ctx->ver.major) ||
+           (major == ctx->ver.major && minor < ctx->ver.minor) ||
+           (major == ctx->ver.major && minor == ctx->ver.minor &&
+            micro <= ctx->ver.micro);
+}
+
+static void on_core_info(void *data, const struct pw_core_info *info) {
+    struct funnel_ctx *ctx = data;
+
+    int major = 0, minor = 0, micro = 0;
+    sscanf(info->version, "%d.%d.%d", &major, &minor, &micro);
+
+    pw_log_info("PipeWire core version: %s (%d.%d.%d)", info->version, major,
+                minor, micro);
+
+    ctx->ver.major = major;
+    ctx->ver.minor = minor;
+    ctx->ver.micro = micro;
+
+    if (check_version(ctx, 1, 2, 0))
+        ctx->feat.explicit_sync = true;
+
+    if (check_version(ctx, 1, 2, 7))
+        ctx->feat.lazy = true;
+
+    ctx->have_info = true;
+    pw_thread_loop_signal(ctx->loop, false);
 }
 
 static const struct pw_core_events core_events = {
     PW_VERSION_CORE_EVENTS,
+    .info = on_core_info,
     .error = on_core_error,
 };
 
@@ -768,6 +802,30 @@ int funnel_init(struct funnel_ctx **pctx) {
     }
 
     pw_core_add_listener(ctx->core, &ctx->core_listener, &core_events, ctx);
+
+    while (!ctx->have_info && !ctx->dead) {
+        if (pw_thread_loop_timed_wait(ctx->loop, 5) < 0) {
+            ctx->dead = true;
+            break;
+        }
+    }
+
+    if (ctx->dead) {
+        pw_thread_loop_unlock(ctx->loop);
+        funnel_shutdown(ctx);
+        return -EIO;
+    }
+
+    // Arbitrarily reject < 1.0.0, to avoid pain due to ancient versions.
+    if (!check_version(ctx, 1, 0, 0)) {
+        pw_log_error("PipeWire core version is too old");
+        pw_thread_loop_unlock(ctx->loop);
+        funnel_shutdown(ctx);
+        return -EOPNOTSUPP;
+    }
+
+    pw_log_info("PipeWire core features: explicit_sync=%d, lazy=%d",
+                ctx->feat.explicit_sync, ctx->feat.lazy);
 
     pw_thread_loop_unlock(ctx->loop);
 

@@ -20,6 +20,14 @@ static inline struct spa_fraction to_spa_fraction(struct funnel_fraction frac) {
 
 struct funnel_ctx {
     bool dead;
+    bool have_info;
+    struct {
+        uint32_t major, minor, micro;
+    } ver;
+    struct {
+        bool explicit_sync;
+        bool lazy;
+    } feat;
     struct pw_thread_loop *loop;
     struct pw_core *core;
     struct pw_context *context;

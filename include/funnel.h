@@ -198,6 +198,8 @@ enum funnel_sync {
  * @param[out] pctx New context @owned
  * @return_err
  * @retval -ECONNREFUSED Failed to connect to PipeWire daemon
+ * @retval -EIO Fatal error connecting to PipeWire daemon
+ * @retval -EOPNOTSUPP PipeWire daemon version is too old
  */
 int funnel_init(struct funnel_ctx **pctx);
 
