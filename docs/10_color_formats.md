@@ -4,13 +4,15 @@ To make sure that frames are displayed correctly, applications using PipeWire fo
 
 To make things work for a typical non-color-managed application, you must encode color using *sRGB* encoding, with *linear alpha blending* and *premultiplied alpha*.
 
-If you are a graphics app developer and you don't know much about color management, alpha, etc., then read the \ref colortldr section.
+If you are a graphics app developer and you don't know much about color management, alpha, etc., then read the \ref colorguide section.
 
 If you are experienced with color management and just want a spec, read the \ref colorspec version.
 
-## TL;DR {#colortldr}
+## How to do color and alpha properly {#colorguide}
 
-If you do not intend to ever send frames with transparency (all your finished frames are fully opaque or you only enable non-alpha color formats), then if you don't care about any of this you can do whatever you want (your framebuffer is already being interpreted as sRGB at the end of the day anyway, if you aren't enabling color management explicitly). Following the guidelines in this section will probably improve your rendering and solve a bunch of subtle problems, but if you don't want to, it won't affect the outcome when sharing frames with libfunnel/PipeWire.
+These guidelines will help you fix a bunch of confusing color and transparency related issues in your app.
+
+If you do not intend to send translucent frames through libfunnel (all finished frames are opaque or you only enable non-alpha color formats), then you don't necessarily have to follow them, as these issues won't affect your usage of libfunnel (even though following these guidelines is likely to improve your rendering).
 
 However, if you want to output frames with a transparent/translucent background, unless you really know what you're doing, you really should follow these rules:
 
@@ -48,13 +50,15 @@ In other words, your color will [not be broken](https://www.youtube.com/watch?v=
 
 ### But this is too hard / changes how I already do things!
 
-If you do not intend to ever send frames with transparency (all your finished frames are fully opaque), then you can do whatever you want (your framebuffer is already being interpreted as sRGB at the end of the day anyway, if you aren't doing explicit color management).
+If you do not intend to ever send frames with transparency, then you can do whatever you want (your framebuffer is already being interpreted as sRGB at the end of the day anyway, if you aren't doing explicit color management).
 
-However, if you want transparency to work, you **have** to premultiply, because GPUs **simply cannot support framebuffer transparency in hardware without premultiplication**.
+However, if you want transparency to work, you **have** to premultiply, because GPUs **simply cannot blend two translucent colors together in hardware without premultiplication**.
 
 ### Really?
 
 Really.
+
+<small>Technically you can do it in a shader with [this](https://registry.khronos.org/OpenGL/extensions/EXT/EXT_shader_framebuffer_fetch.txt) but that only works well on mobile GPUs and Apple M GPUs. It works on Intel but it's slower, and it is not supported on AMD and Nvidia at all. So yeah.</small>
 
 ### I did what you said, and it changed the way my transparent textures look!
 
@@ -72,7 +76,7 @@ Sorry, apps like OBS will blend in linear light, and it's the only reasonable wa
         rgb = linear_to_srgb(srgb_to_linear(rgb / alpha) * alpha)
 ~~~
 
-Note that this will only work as intended if you don't have emissive pixels (that is, pixels where color > alpha). Emissive/additive blending *really* doesn't make any sense if you don't do blending in linear space. There's just no way to make that math work out.
+Note that this will only work as intended if you don't have emissive pixels (that is, pixels where color > alpha). Emissive/additive blending *really* doesn't make any sense if you don't do blending in linear space. There's just no way to make that math work out, because by the time you've blended colors "wrong", there's no way to make the output correct when blending "right", as the math becomes ambiguous.
 
 ### I want to render with a background, but then make the background transparent when I send frames to libfunnel/PipeWire
 
@@ -90,7 +94,7 @@ Not if you had any semi-transparent pixels at all. You'd get the background blee
 
 Sigh. In a *very specific case*, this could work correctly with Spout2 on Windows, if and only if all your rendered foreground pixels are opaque (no MSAA, no translucent textures, etc.)
 
-In this case, you could theoretically render some stuff to your framebuffer while keeping alpha at 1.0, then render a foreground with alpha at 1.0, and send the result to Spout2, and have users select the "Default" blending mode (straight alpha), and end up with something that kind of works (kind of, because sampling in the destination would still be broken in some cases if the source is resized at all in OBS).
+In this case, you could theoretically render some background stuff to your framebuffer while keeping the framebuffer alpha channel at 0.0, then render a foreground with alpha at 1.0, and send the result to Spout2, and have users select the "Default" blending mode (straight alpha), and end up with something that kind of works (kind of, because sampling in the destination would still be broken in some cases if the source is resized at all in OBS).
 
 Because this requires manual configuration by users, and it only works in a specific case, it will never be supported in PipeWire/libfunnel directly. Sorry. If you really want to shoehorn the same result in when using libfunnel, you have to add a postprocess premultiply pass while copying into the libfunnel buffer:
 
