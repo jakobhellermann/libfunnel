@@ -1004,6 +1004,15 @@ int funnel_stream_init_gbm(struct funnel_stream *stream, int gbm_fd) {
                 stream->feat.timeline_sync_import_export,
                 stream->feat.migration_bug);
 
+    if (!(stream->feat.implicit_sync || stream->feat.explicit_sync)) {
+        pw_log_error(
+            "Your GPU driver does not support any synchronization "
+            "mechanism with GBM, so it cannot be used. If you are "
+            "using the Nvidia proprietary drivers, update to 555 or newer.");
+        shutdown_gbm(stream);
+        return -EOPNOTSUPP;
+    }
+
     if (stream->feat.explicit_sync && !stream->ctx->feat.explicit_sync) {
         if (!stream->feat.implicit_sync) {
             pw_log_error("PipeWire is too old for explicit sync and driver "
@@ -1015,8 +1024,6 @@ int funnel_stream_init_gbm(struct funnel_stream *stream, int gbm_fd) {
         stream->feat.explicit_sync = false;
         pw_log_warn("PipeWire is too old, explicit sync support unavailable");
     }
-
-    assert(stream->feat.implicit_sync || stream->feat.explicit_sync);
 
     stream->api = API_GBM;
     return 0;

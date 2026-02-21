@@ -26,6 +26,7 @@ extern "C" {
  * @retval -EEXIST The API was already initialized once
  * @retval -EINVAL Failed to create GBM device
  * @retval -EPROTONOSUPPORT GPU driver not supported (PipeWire version too old)
+ * @retval -EOPNOTSUPP The GBM device does not have the required features
  */
 int funnel_stream_init_gbm(struct funnel_stream *stream, int gbm_fd);
 
