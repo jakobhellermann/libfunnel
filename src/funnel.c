@@ -776,6 +776,14 @@ static int build_formats(struct funnel_stream *stream, bool fixate,
 }
 
 int funnel_init(struct funnel_ctx **pctx) {
+    int ret = funnel_new(pctx);
+    if (ret < 0)
+        return ret;
+
+    return funnel_connect(*pctx);
+}
+
+int funnel_new(struct funnel_ctx **pctx) {
     struct funnel_ctx *ctx;
 
     *pctx = NULL;
@@ -793,6 +801,17 @@ int funnel_init(struct funnel_ctx **pctx) {
 
     ctx->context = pw_context_new(pw_thread_loop_get_loop(ctx->loop), NULL, 0);
     assert(ctx->context);
+
+    *pctx = ctx;
+
+    UNLOCK_RETURN(0);
+}
+
+int funnel_connect(struct funnel_ctx *ctx) {
+    pw_thread_loop_lock(ctx->loop);
+
+    if (ctx->core)
+        UNLOCK_RETURN(-EINVAL);
 
     if ((ctx->core = pw_context_connect(ctx->context, NULL, 0)) == NULL) {
         pw_log_error("failed to connect to PipeWire");
@@ -827,10 +846,7 @@ int funnel_init(struct funnel_ctx **pctx) {
     pw_log_info("PipeWire core features: explicit_sync=%d, lazy=%d",
                 ctx->feat.explicit_sync, ctx->feat.lazy);
 
-    pw_thread_loop_unlock(ctx->loop);
-
-    *pctx = ctx;
-    return 0;
+    UNLOCK_RETURN(0);
 }
 
 void funnel_shutdown(struct funnel_ctx *ctx) {
@@ -860,6 +876,9 @@ int funnel_stream_create(struct funnel_ctx *ctx, const char *name,
     assert(ctx);
 
     pw_thread_loop_lock(ctx->loop);
+
+    if (!ctx->core)
+        UNLOCK_RETURN(-EINVAL);
 
     if (ctx->dead)
         UNLOCK_RETURN(-EIO);

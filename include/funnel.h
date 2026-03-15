@@ -209,10 +209,9 @@ enum funnel_stream_state {
 };
 
 /**
- * Create a Funnel context.
+ * Initialize a Funnel context.
  *
- * As multiple Funnel contexts are completely independent, this function has no
- * synchronization requirements.
+ * This is equivalent to funnel_create() followed by funnel_connect().
  *
  * @param[out] pctx New context @owned
  * @return_err
@@ -221,6 +220,31 @@ enum funnel_stream_state {
  * @retval -EOPNOTSUPP PipeWire daemon version is too old
  */
 int funnel_init(struct funnel_ctx **pctx);
+
+/**
+ * Create a Funnel context.
+ *
+ * As multiple Funnel contexts are completely independent, this function has no
+ * synchronization requirements.
+ *
+ * @param[out] pctx New context @owned
+ * @return_err
+ */
+int funnel_new(struct funnel_ctx **pctx);
+
+/**
+ * Connect to PipeWire.
+ *
+ * @sync-ext
+ *
+ * @param ctx Context @borrowed
+ * @return_err
+ * @retval -EINVAL The context is already connected to PipeWire
+ * @retval -ECONNREFUSED Failed to connect to PipeWire daemon
+ * @retval -EIO Fatal error connecting to PipeWire daemon
+ * @retval -EOPNOTSUPP PipeWire daemon version is too old
+ */
+int funnel_connect(struct funnel_ctx *pctx);
 
 /**
  * Shut down a Funnel context.
@@ -240,6 +264,7 @@ void funnel_shutdown(struct funnel_ctx *ctx);
  * @param name Name of the new stream @borrowed
  * @param[out] pstream New stream @owned-from{ctx}
  * @return_err
+ * @retval -EINVAL The context has not been connected to PipeWire yet
  * @retval -EIO The PipeWire context is invalid (fatal error)
  */
 int funnel_stream_create(struct funnel_ctx *ctx, const char *name,
