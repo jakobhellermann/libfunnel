@@ -1495,6 +1495,7 @@ int funnel_stream_configure(struct funnel_stream *stream) {
         props = pw_properties_new(
             PW_KEY_MEDIA_TYPE, "Video",
             PW_KEY_MEDIA_CLASS, "Stream/Output/Video",
+            PW_KEY_MEDIA_ROLE, "Production",
             PW_KEY_NODE_SUPPORTS_LAZY, lazy ? "1" : NULL,
             PW_KEY_NODE_SUPPORTS_REQUEST, request ? "1" : NULL,
             PW_KEY_PRIORITY_DRIVER, driver_prio,
