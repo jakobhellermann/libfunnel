@@ -198,7 +198,8 @@ void gl_setup_scene(void) {
         0.f, 1.f, 0.0f, 1.f, -1.f, 0.0f, -1.f, -1.f, 0.0f,
     };
     unsigned int indices[] = {
-        0, 1,
+        0,
+        1,
         2, // first Triangle
     };
 
@@ -371,7 +372,19 @@ int main(int argc, char **argv) {
 
     eglSwapInterval(egl_display, mode == FUNNEL_ASYNC ? 1 : 0);
 
-    ret = funnel_init(&ctx);
+    ret = funnel_new(&ctx);
+    assert(ret == 0);
+
+    ret = funnel_set_app_name(ctx, "Funnel EGL Test");
+    assert(ret == 0);
+
+    ret = funnel_set_app_id(ctx, "yt.lina.libfunnel.test-egl");
+    assert(ret == 0);
+
+    ret = funnel_set_app_version(ctx, "0.1");
+    assert(ret == 0);
+
+    ret = funnel_connect(ctx);
     assert(ret == 0);
 
     ret = funnel_stream_create(ctx, "Funnel Test", &stream);
