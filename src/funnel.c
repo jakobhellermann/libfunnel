@@ -934,6 +934,10 @@ int funnel_stream_create(struct funnel_ctx *ctx, const char *name,
                                       on_timeout, stream);
     assert(stream->timer);
 
+    // Escape hatch for users who want to run multiple instances without
+    // an app-specific unique ID.
+    stream->id.instance = getenv("FUNNEL_INSTANCE");
+
     *pstream = stream;
 
     UNLOCK_RETURN(0);
@@ -1337,6 +1341,63 @@ int funnel_stream_get_rate(struct funnel_stream *stream,
     UNLOCK_RETURN(0);
 }
 
+static int stream_set_string(struct funnel_stream *stream, char **s,
+                             const char *v) {
+    if (stream->stream)
+        return -EINVAL;
+
+    assert(stream->config_pending);
+
+    if (*s) {
+        free(*s);
+        *s = NULL;
+    }
+
+    if (v)
+        *s = strdup(v);
+
+    return 0;
+}
+
+int funnel_stream_set_instance(struct funnel_stream *stream,
+                               const char *instance, bool user_friendly) {
+    int ret = stream_set_string(stream, &stream->id.instance, instance);
+    if (ret >= 0)
+        stream->id.instance_user_friendly = instance && user_friendly;
+
+    return ret;
+}
+
+int funnel_stream_set_unique_id(struct funnel_stream *stream,
+                                const char *unique_id) {
+    return stream_set_string(stream, &stream->id.unique, unique_id);
+}
+
+int funnel_stream_set_description(struct funnel_stream *stream,
+                                  const char *description) {
+    return stream_set_string(stream, &stream->id.description, description);
+}
+
+int funnel_stream_set_media_name(struct funnel_stream *stream,
+                                 const char *media_name) {
+    if (stream->id.media_name) {
+        free(stream->id.media_name);
+        stream->id.media_name = NULL;
+    }
+
+    stream->id.media_name = strdup(media_name);
+    stream->config_pending = true;
+    return 0;
+}
+
+void sanitize_name(char *s) {
+    assert(s);
+
+    for (char *p = s; *p; p++)
+        if (!(isalnum(*p) || strchr("-_.", *p)))
+            *p = '_';
+}
+
 int funnel_stream_configure(struct funnel_stream *stream) {
     struct funnel_ctx *ctx = stream->ctx;
 
@@ -1393,6 +1454,42 @@ int funnel_stream_configure(struct funnel_stream *stream) {
     if (!stream->stream) {
         new_stream = true;
 
+        const struct pw_properties *cprops =
+            pw_context_get_properties(ctx->context);
+
+        const char *app_name = pw_properties_get(cprops, PW_KEY_APP_NAME);
+
+        const char *app_id = pw_properties_get(cprops, PW_KEY_APP_ID);
+        if (!app_id)
+            app_id = app_name;
+        if (!app_id)
+            app_id = pw_properties_get(cprops, PW_KEY_APP_PROCESS_BINARY);
+        if (!app_id)
+            app_id = "libfunnel";
+
+        const char *stream_id = stream->id.unique ?: stream->name;
+
+        char node_name[1024];
+
+        if (stream->id.instance)
+            snprintf(node_name, sizeof(node_name), "%s.%s.%s", app_id,
+                     stream->id.instance, stream_id);
+        else
+            snprintf(node_name, sizeof(node_name), "%s.%s", app_id, stream_id);
+
+        node_name[sizeof(node_name) - 1] = 0;
+        sanitize_name(node_name);
+
+        char node_desc[1024];
+        if (stream->id.instance && stream->id.instance_user_friendly)
+            snprintf(node_desc, sizeof(node_desc), "%s (%s): %s",
+                     app_name ?: app_id, stream->id.instance, stream->name);
+        else
+            snprintf(node_desc, sizeof(node_desc), "%s: %s", app_name ?: app_id,
+                     stream->name);
+
+        node_desc[sizeof(node_desc) - 1] = 0;
+
         struct pw_properties *props;
         // clang-format off
         props = pw_properties_new(
@@ -1401,6 +1498,10 @@ int funnel_stream_configure(struct funnel_stream *stream) {
             PW_KEY_NODE_SUPPORTS_LAZY, lazy ? "1" : NULL,
             PW_KEY_NODE_SUPPORTS_REQUEST, request ? "1" : NULL,
             PW_KEY_PRIORITY_DRIVER, driver_prio,
+            PW_KEY_NODE_NAME, node_name,
+            PW_KEY_NODE_DESCRIPTION, node_desc,
+            PW_KEY_NODE_NICK, stream->name,
+            PW_KEY_MEDIA_NAME, stream->id.media_name ?: stream->name,
             NULL
         );
         // clang-format on
@@ -1422,6 +1523,7 @@ int funnel_stream_configure(struct funnel_stream *stream) {
             PW_KEY_NODE_SUPPORTS_LAZY, lazy ? "1" : NULL,
             PW_KEY_NODE_SUPPORTS_REQUEST, request ? "1" : NULL,
             PW_KEY_PRIORITY_DRIVER, driver_prio,
+            PW_KEY_MEDIA_NAME, stream->id.media_name,
             NULL
         );
         // clang-format on
@@ -1567,6 +1669,10 @@ void funnel_stream_destroy(struct funnel_stream *stream) {
 
     shutdown_gbm(stream);
 
+    free((void *)stream->id.instance);
+    free((void *)stream->id.unique);
+    free((void *)stream->id.description);
+    free((void *)stream->id.media_name);
     free((void *)stream->name);
     free(stream);
 }

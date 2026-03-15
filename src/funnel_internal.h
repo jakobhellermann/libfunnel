@@ -119,6 +119,14 @@ struct funnel_stream {
     struct pw_stream *stream;
     struct spa_source *timer;
 
+    struct {
+        char *instance;
+        char *unique;
+        char *description;
+        char *media_name;
+        bool instance_user_friendly;
+    } id;
+
     struct funnel_stream_config config;
     bool config_pending;
 

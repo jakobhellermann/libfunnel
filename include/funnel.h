@@ -342,6 +342,105 @@ void funnel_stream_set_buffer_callbacks(struct funnel_stream *stream,
                                         void *opaque);
 
 /**
+ * Set the instance for this stream.
+ *
+ * This should be an identifier to tell apart multiple instances of your
+ * application, if it supports multiple concurrent instances (or multiple
+ * "documents"). It should be persistent. For example, you can use the
+ * "project"/"file" name the user is working with.
+ *
+ * Do not use a volatile ID such as the process ID, as that will break
+ * auto-connection on restart.
+ *
+ * If you do not have anything that could be used for this purpose, then
+ * you must either allow it to be user-configurable, or leave the instance
+ * name unset and instead make sure that the stream name is user-configurable,
+ * so that users can ensure that streams across multiple instances of your
+ * application can always be uniquely identified.
+ *
+ * This cannot be changed after the stream is first configured.
+ *
+ * @sync-ext
+ *
+ * @param stream Stream @borrowed
+ * @param instance Instance identifier @borrowed
+ * @param user_friendly Whether the instance name is "user friendly"
+ *                      and should be included in the default description.
+ * @return_err
+ * @retval -EINVAL
+ *  * Invalid argument
+ *  * Stream is in an invalid state (already configured)
+ */
+int funnel_stream_set_instance(struct funnel_stream *stream,
+                               const char *instance, bool user_friendly);
+
+/**
+ * Set the unique ID for this stream.
+ *
+ * This should be a persistent, unique ID within your instance. It defaults
+ * to the stream name, with special characters removed. For example, this
+ * could be a UUID if you have such an internal unique identifier for the
+ * stream.
+ *
+ * This cannot be changed after the stream is first configured.
+ *
+ * @sync-ext
+ *
+ * @param stream Stream @borrowed
+ * @param stream_id Stream ID
+ * @return_err
+ * @retval -EINVAL
+ *  * Invalid argument
+ *  * Stream is in an invalid state (already configured)
+ */
+int funnel_stream_set_unique_id(struct funnel_stream *stream,
+                                const char *stream_id);
+
+/**
+ * Set the description for this stream.
+ *
+ * This should be a user-friendly description.
+ *
+ * Defaults to an automatically generated string using the application
+ * name, instance name (if friendly), and stream name.
+ *
+ * This cannot be changed after the stream is first configured.
+ *
+ * @sync-ext
+ *
+ * @param stream Stream @borrowed
+ * @param stream_id Stream ID
+ * @return_err
+ * @retval -EINVAL
+ *  * Invalid argument
+ *  * Stream is in an invalid state (already configured)
+ */
+int funnel_stream_set_description(struct funnel_stream *stream,
+                                  const char *description);
+
+/**
+ * Set the media name for this stream.
+ *
+ * Unlike the other name properties, this *can* be changed
+ * while the stream is running. For example, when a stream
+ * is playing back a particular video content, the media name
+ * can reflect that to the user (e.g. the name of a movie).
+ *
+ * Call funnel_stream_configure() after this to update the stream.
+ *
+ * Defaults to the stream name.
+ *
+ * @sync-ext
+ *
+ * @param stream Stream @borrowed
+ * @param stream_id Stream ID
+ * @return_err
+ * @retval -EINVAL Invalid argument
+ */
+int funnel_stream_set_media_name(struct funnel_stream *stream,
+                                 const char *media_name);
+
+/**
  * Set the frame dimensions for a stream.
  *
  * @sync-ext
