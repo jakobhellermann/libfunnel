@@ -937,6 +937,11 @@ int funnel_stream_create(struct funnel_ctx *ctx, const char *name,
     // Escape hatch for users who want to run multiple instances without
     // an app-specific unique ID.
     stream->id.instance = getenv("FUNNEL_INSTANCE");
+    if (!stream->id.instance[0])
+        stream->id.instance = NULL;
+
+    if (stream->id.instance)
+        stream->id.instance_user_friendly = true;
 
     *pstream = stream;
 
