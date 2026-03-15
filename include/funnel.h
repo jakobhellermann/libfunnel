@@ -243,7 +243,7 @@ int funnel_new(struct funnel_ctx **pctx);
  * @sync-int
  *
  * @param ctx Context @borrowed
- * @param app_name Application name
+ * @param app_name Application name @borrowed
  * @return_err
  * @retval -EINVAL
  *  * Invalid argument
@@ -262,7 +262,7 @@ int funnel_set_app_name(struct funnel_ctx *ctx, const char *app_name);
  * @sync-int
  *
  * @param ctx Context @borrowed
- * @param app_id Application ID
+ * @param app_id Application ID @borrowed
  * @return_err
  * @retval -EINVAL
  *  * Invalid argument
@@ -280,7 +280,7 @@ int funnel_set_app_id(struct funnel_ctx *ctx, const char *app_id);
  * @sync-int
  *
  * @param ctx Context @borrowed
- * @param app_version Application version
+ * @param app_version Application version @borrowed
  * @return_err
  * @retval -EINVAL
  *  * Invalid argument
@@ -300,7 +300,7 @@ int funnel_set_app_version(struct funnel_ctx *ctx, const char *app_version);
  * @retval -EIO Fatal error connecting to PipeWire daemon
  * @retval -EOPNOTSUPP PipeWire daemon version is too old
  */
-int funnel_connect(struct funnel_ctx *pctx);
+int funnel_connect(struct funnel_ctx *ctx);
 
 /**
  * Shut down a Funnel context.
@@ -387,7 +387,7 @@ int funnel_stream_set_instance(struct funnel_stream *stream,
  * @sync-ext
  *
  * @param stream Stream @borrowed
- * @param stream_id Stream ID
+ * @param stream_id Stream ID @borrowed
  * @return_err
  * @retval -EINVAL
  *  * Invalid argument
@@ -409,7 +409,7 @@ int funnel_stream_set_unique_id(struct funnel_stream *stream,
  * @sync-ext
  *
  * @param stream Stream @borrowed
- * @param stream_id Stream ID
+ * @param description Stream description @borrowed
  * @return_err
  * @retval -EINVAL
  *  * Invalid argument
@@ -433,7 +433,7 @@ int funnel_stream_set_description(struct funnel_stream *stream,
  * @sync-ext
  *
  * @param stream Stream @borrowed
- * @param stream_id Stream ID
+ * @param media_name Media name @borrowed
  * @return_err
  * @retval -EINVAL Invalid argument
  */
