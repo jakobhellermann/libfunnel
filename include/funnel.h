@@ -233,6 +233,62 @@ int funnel_init(struct funnel_ctx **pctx);
 int funnel_new(struct funnel_ctx **pctx);
 
 /**
+ * Set the user-friendly application name.
+ *
+ * This should be the name of your application.
+ * It defaults to the process name.
+ *
+ * This cannot be changed after the context is connected.
+ *
+ * @sync-int
+ *
+ * @param ctx Context @borrowed
+ * @param app_name Application name
+ * @return_err
+ * @retval -EINVAL
+ *  * Invalid argument
+ *  * The context is already connected to PipeWire
+ */
+int funnel_set_app_name(struct funnel_ctx *ctx, const char *app_name);
+
+/**
+ * Set the application ID.
+ *
+ * This should be the a unique ID for your application, such as
+ * a Flatpak reverse-DNS style ID.
+ *
+ * This cannot be changed after the context is connected.
+ *
+ * @sync-int
+ *
+ * @param ctx Context @borrowed
+ * @param app_id Application ID
+ * @return_err
+ * @retval -EINVAL
+ *  * Invalid argument
+ *  * The context is already connected to PipeWire
+ */
+int funnel_set_app_id(struct funnel_ctx *ctx, const char *app_id);
+
+/**
+ * Set the application version.
+ *
+ * A version number, such as "1.2.3".
+ *
+ * This cannot be changed after the context is connected.
+ *
+ * @sync-int
+ *
+ * @param ctx Context @borrowed
+ * @param app_version Application version
+ * @return_err
+ * @retval -EINVAL
+ *  * Invalid argument
+ *  * The context is already connected to PipeWire
+ */
+int funnel_set_app_version(struct funnel_ctx *ctx, const char *app_version);
+
+/**
  * Connect to PipeWire.
  *
  * @sync-ext

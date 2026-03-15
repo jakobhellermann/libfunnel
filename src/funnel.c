@@ -807,6 +807,32 @@ int funnel_new(struct funnel_ctx **pctx) {
     UNLOCK_RETURN(0);
 }
 
+static int set_ctx_prop(struct funnel_ctx *ctx, const char *prop,
+                        const char *value) {
+    pw_thread_loop_lock(ctx->loop);
+
+    if (ctx->core)
+        UNLOCK_RETURN(-EINVAL);
+
+    struct pw_properties *props = pw_properties_new(prop, value, NULL);
+    pw_context_update_properties(ctx->context, &props->dict);
+    pw_properties_free(props);
+
+    UNLOCK_RETURN(0);
+}
+
+int funnel_set_app_name(struct funnel_ctx *ctx, const char *app_name) {
+    return set_ctx_prop(ctx, PW_KEY_APP_NAME, app_name);
+}
+
+int funnel_set_app_id(struct funnel_ctx *ctx, const char *app_id) {
+    return set_ctx_prop(ctx, PW_KEY_APP_ID, app_id);
+}
+
+int funnel_set_app_version(struct funnel_ctx *ctx, const char *app_version) {
+    return set_ctx_prop(ctx, PW_KEY_APP_VERSION, app_version);
+}
+
 int funnel_connect(struct funnel_ctx *ctx) {
     pw_thread_loop_lock(ctx->loop);
 
