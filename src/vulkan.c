@@ -358,7 +358,7 @@ static void buffer_wait_idle(struct funnel_vk_stream *vks,
         vkWaitForFences(vks->device, 1, &vkbuf->fence, 1, UINT64_MAX);
 
     if (res != VK_SUCCESS)
-        pw_log_error("vkWaitForFences failed for buffer fence");
+        pw_log_error("vkWaitForFences failed for buffer fence: %d", res);
 }
 
 void funnel_vk_free_buffer(struct funnel_buffer *buffer) {
