@@ -168,6 +168,10 @@ static void on_add_buffer(void *data, struct pw_buffer *pwbuffer) {
     struct funnel_stream *stream = data;
     const struct spa_buffer *spa_buffer = pwbuffer->buffer;
 
+    // Refuse to allocate any buffers if stream is in error state
+    if (pw_stream_get_state(stream->stream, NULL) == PW_STREAM_STATE_ERROR)
+        return;
+
     struct spa_meta_sync_timeline *stl;
     stl = spa_buffer_find_meta_data(spa_buffer, SPA_META_SyncTimeline,
                                     sizeof(*stl));
@@ -181,8 +185,13 @@ static void on_add_buffer(void *data, struct pw_buffer *pwbuffer) {
                                        stream->cur.height, stream->cur.format,
                                        &stream->cur.modifier, 1,
                                        stream->cur.config.bo_flags);
-
-    assert(bo);
+    if (!bo) {
+        pw_log_error(
+            "on_add_buffer: Failed to allocate BO (out of GPU memory?)");
+        pw_stream_set_error(stream->stream, -ENOMEM,
+                            "Failed to allocate GPU memory");
+        return;
+    }
 
     struct funnel_buffer *buffer = calloc(1, sizeof(struct funnel_buffer));
     buffer->pw_buffer = pwbuffer;
