@@ -1808,6 +1808,9 @@ int funnel_stream_dequeue(struct funnel_stream *stream,
         pw_log_warn("dequeue: out of buffers?");
         if (stream->cur.config.mode == FUNNEL_ASYNC)
             UNLOCK_RETURN(0);
+
+        // If we are in the sync cycle, bail and skip a process cycle
+        unblock_process_thread(stream);
     }
 
     struct funnel_buffer *buf = pwbuffer->user_data;
