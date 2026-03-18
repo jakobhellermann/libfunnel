@@ -75,6 +75,30 @@ static struct {
 
 ///////////////////////////////////////////////
 
+const char *sync_cycle_s(enum funnel_sync_cycle state) {
+    switch (state) {
+    case SYNC_CYCLE_INACTIVE:
+        return "INACTIVE";
+    case SYNC_CYCLE_WAITING:
+        return "WAITING";
+    case SYNC_CYCLE_ACTIVE:
+        return "ACTIVE";
+    case SYNC_CYCLE_FINISH:
+        return "FINISH";
+    default:
+        return "UNKNOWN";
+    }
+}
+
+void set_state_(const char *f, struct funnel_stream *stream,
+                enum funnel_sync_cycle state) {
+    pw_log_trace("%s: State %s -> %s", f, sync_cycle_s(stream->cycle_state),
+                 sync_cycle_s(state));
+    stream->cycle_state = state;
+}
+
+#define set_state(stream, state) set_state_(__func__, stream, state)
+
 static int funnel_stream_import_sync_file(struct funnel_stream *stream,
                                           uint32_t handle, int fd,
                                           uint64_t point);
@@ -626,16 +650,32 @@ static void on_command(void *data, const struct spa_command *command) {
 }
 
 static void unblock_process_thread(struct funnel_stream *stream) {
+    pw_log_trace("Unblock: Current state = %s",
+                 sync_cycle_s(stream->cycle_state));
     if (stream->cycle_state == SYNC_CYCLE_ACTIVE) {
+        set_state(stream, SYNC_CYCLE_FINISH);
         pw_thread_loop_accept(stream->ctx->loop);
+    } else if (stream->cycle_state == SYNC_CYCLE_WAITING) {
+        set_state(stream, SYNC_CYCLE_INACTIVE);
     }
-    stream->cycle_state = SYNC_CYCLE_INACTIVE;
+}
+
+static void wait_for_process_idle(struct funnel_stream *stream) {
+    unblock_process_thread(stream);
+
+    while (stream->cycle_state == SYNC_CYCLE_FINISH) {
+        pw_log_trace("Wait for process idle (currently FINISH)\n");
+        pw_thread_loop_wait(stream->ctx->loop);
+    }
+    if (stream->cycle_state != SYNC_CYCLE_INACTIVE)
+        set_state(stream, SYNC_CYCLE_INACTIVE);
 }
 
 static void on_process(void *data) {
     struct funnel_stream *stream = data;
 
-    pw_log_trace("BEGIN frame %d", ++stream->frame);
+    pw_log_trace("BEGIN frame %d (state = %s)", ++stream->frame,
+                 sync_cycle_s(stream->cycle_state));
 
     if (!stream->active)
         return;
@@ -643,15 +683,17 @@ static void on_process(void *data) {
     if (stream->cur.config.mode == FUNNEL_SYNCHRONOUS) {
         // Sync mode handshake
         if (stream->cycle_state == SYNC_CYCLE_WAITING) {
-            stream->cycle_state = SYNC_CYCLE_ACTIVE;
-            pw_log_trace("Signal sync");
+            set_state(stream, SYNC_CYCLE_ACTIVE);
             pw_thread_loop_signal(stream->ctx->loop, true);
-            pw_log_trace("Accepted");
+            pw_log_trace("Accepted, state = %s",
+                         sync_cycle_s(stream->cycle_state));
         }
         // We should have a buffer now, if the cycle succeeded
     }
 
-    if (stream->pending_buffer) {
+    if (!stream->active) {
+        pw_log_trace("Stream stopped during process");
+    } else if (stream->pending_buffer) {
         struct funnel_buffer *buf = stream->pending_buffer;
         stream->pending_buffer = NULL;
 
@@ -677,6 +719,7 @@ static void on_process(void *data) {
         stream->skip_buffer = false;
     }
 
+    set_state(stream, SYNC_CYCLE_INACTIVE);
     pw_thread_loop_signal(stream->ctx->loop, false);
 
     pw_log_trace("END frame %d", stream->frame);
@@ -1607,7 +1650,7 @@ int funnel_stream_stop(struct funnel_stream *stream) {
 
     // Unblock the process call if blocked
     stream->active = false;
-    unblock_process_thread(stream);
+    wait_for_process_idle(stream);
 
     UNLOCK_RETURN(pw_stream_set_active(stream->stream, false));
 }
@@ -1738,8 +1781,10 @@ int funnel_stream_dequeue(struct funnel_stream *stream,
              * Tell the process callback that we are ready to start
              * processing a frame.
              */
-            pw_log_trace("## Wait for process (sync)");
-            stream->cycle_state = SYNC_CYCLE_WAITING;
+            pw_log_info("## Waiting for sync process cycle (state=%s)\n",
+                        sync_cycle_s(stream->cycle_state));
+            if (stream->cycle_state == SYNC_CYCLE_INACTIVE)
+                set_state(stream, SYNC_CYCLE_WAITING);
             continue;
         }
 

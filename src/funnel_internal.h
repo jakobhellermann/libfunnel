@@ -83,6 +83,7 @@ enum funnel_sync_cycle {
     SYNC_CYCLE_INACTIVE,
     SYNC_CYCLE_WAITING,
     SYNC_CYCLE_ACTIVE,
+    SYNC_CYCLE_FINISH,
 };
 
 struct funnel_sync_point {
