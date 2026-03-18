@@ -540,7 +540,7 @@ static void on_param_changed(void *data, uint32_t id,
         }
     }
 
-    pw_log_info("Found prop with %d modifiers, flags=%d\n", mod_count,
+    pw_log_info("Found prop with %d modifiers, flags=%d", mod_count,
                 mod_prop->flags);
 
     if (mod_prop->flags & SPA_POD_PROP_FLAG_DONT_FIXATE) {
@@ -664,7 +664,7 @@ static void wait_for_process_idle(struct funnel_stream *stream) {
     unblock_process_thread(stream);
 
     while (stream->cycle_state == SYNC_CYCLE_FINISH) {
-        pw_log_trace("Wait for process idle (currently FINISH)\n");
+        pw_log_trace("Wait for process idle (currently FINISH)");
         pw_thread_loop_wait(stream->ctx->loop);
     }
     if (stream->cycle_state != SYNC_CYCLE_INACTIVE)
@@ -1781,7 +1781,7 @@ int funnel_stream_dequeue(struct funnel_stream *stream,
              * Tell the process callback that we are ready to start
              * processing a frame.
              */
-            pw_log_info("## Waiting for sync process cycle (state=%s)\n",
+            pw_log_info("## Waiting for sync process cycle (state=%s)",
                         sync_cycle_s(stream->cycle_state));
             if (stream->cycle_state == SYNC_CYCLE_INACTIVE)
                 set_state(stream, SYNC_CYCLE_WAITING);
