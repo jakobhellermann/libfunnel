@@ -516,10 +516,10 @@ static void on_param_changed(void *data, uint32_t id,
         }
     }
 
-    if (stream->cur.width != stream->cur.video_format.size.width ||
-        stream->cur.height != stream->cur.video_format.size.height ||
-        stream->cur.format != dmabuf_format) {
+    pw_log_info("Found prop with %d modifiers, flags=%d\n", mod_count,
+                mod_prop->flags);
 
+    if (mod_prop->flags & SPA_POD_PROP_FLAG_DONT_FIXATE) {
         if (!test_create_dmabuf(stream, dmabuf_format, modifiers, mod_count)) {
             pw_log_error("failed to create dmabuf for format 0x%x",
                          dmabuf_format);
