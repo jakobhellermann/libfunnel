@@ -382,7 +382,10 @@ static void return_buffer(struct funnel_stream *stream,
         funnel_buffer_free(buf);
     }
 
-    assert(!pw_stream_return_buffer(stream->stream, buf->pw_buffer));
+    int ret = pw_stream_return_buffer(stream->stream, buf->pw_buffer);
+    if (ret < 0)
+        pw_log_error("Failed to return PW buffer: %d", ret);
+    assert(ret >= 0);
 }
 
 static void reset_buffers(struct funnel_stream *stream) {
@@ -1864,18 +1867,26 @@ static int funnel_stream_enqueue_internal(struct funnel_stream *stream,
         }
 
         if (ctx->dead || !stream->active) {
-            pw_stream_return_buffer(stream->stream, buf->pw_buffer);
             pw_log_info(
                 "enqueue: Context is dead or inactive, dropping buffer");
+            int ret = pw_stream_return_buffer(stream->stream, buf->pw_buffer);
+            if (ret < 0)
+                pw_log_error("Failed to return PW buffer: %d", ret);
+            assert(ret >= 0);
             UNLOCK_RETURN(0);
         }
 
         enum pw_stream_state state = pw_stream_get_state(stream->stream, NULL);
         if (state != PW_STREAM_STATE_STREAMING) {
-            pw_stream_return_buffer(stream->stream, buf->pw_buffer);
+            pw_log_info("enqueue: Stream is not running, dropping buffer");
+
+            int ret = pw_stream_return_buffer(stream->stream, buf->pw_buffer);
+            if (ret < 0)
+                pw_log_error("Failed to return PW buffer: %d", ret);
+            assert(ret >= 0);
+
             unblock_process_thread(stream);
             // Dropped buffer due to stream pause, discarded (no error)
-            pw_log_info("enqueue: Stream is not running, dropping buffer");
             UNLOCK_RETURN(0);
         }
 
@@ -1900,7 +1911,12 @@ static int funnel_stream_enqueue_internal(struct funnel_stream *stream,
 
     if (stream->cur.config.mode == FUNNEL_SYNCHRONOUS &&
         stream->cycle_state != SYNC_CYCLE_ACTIVE) {
-        pw_stream_return_buffer(stream->stream, buf->pw_buffer);
+
+        int ret = pw_stream_return_buffer(stream->stream, buf->pw_buffer);
+        if (ret < 0)
+            pw_log_error("Failed to return PW buffer: %d", ret);
+        assert(ret >= 0);
+
         pw_log_info("enqueue: Aborted sync cycle, dropping buffer");
         UNLOCK_RETURN(0);
     }
